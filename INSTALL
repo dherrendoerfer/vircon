@@ -1,0 +1,23 @@
+Build
+-----
+
+Make sure kernel and libvncserver devel packages are installed.
+
+Issue:
+make
+
+Loading and using the vircon module
+-----------------------------------
+
+insmod vircon.ko vircon_enable=1
+fbset  -xres 1024 -yres 768 -depth 16
+
+
+Using fbvncserver
+-----------------
+
+Issue fbvncserver -h for usage information.
+
+Example:
+./fbvncserver -f /dev/fb0 -k /dev/input/event4 -t /dev/input/event5
+( or simply ./fbvncserver -m )

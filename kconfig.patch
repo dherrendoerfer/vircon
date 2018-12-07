@@ -1,0 +1,41 @@
+diff --git a/drivers/video/Kconfig b/drivers/video/Kconfig
+index 2e937bd..b31ee33 100644
+--- a/drivers/video/Kconfig
++++ b/drivers/video/Kconfig
+@@ -2260,6 +2260,36 @@ config FB_VIRTUAL
+ 
+ 	  If unsure, say N.
+ 
++config FB_VIRCON
++	tristate "Virtual Frame Buffer Console"
++	depends on FB
++	select FB_SYS_FILLRECT
++	select FB_SYS_COPYAREA
++	select FB_SYS_IMAGEBLIT
++	select FB_SYS_FOPS
++	select FONT_8x16 if FRAMEBUFFER_CONSOLE
++	select VT_HW_CONSOLE_BINDING if FRAMEBUFFER_CONSOLE
++	select INPUT
++	select INPUT_EVDEV
++	select INPUT_KEYBOARD
++	select INPUT_MOUSE
++	select INPUT_TOUCHSCREEN
++	---help---
++          This is a `virtual' frame buffer console device.
++          Like vfb it operates on a chunk of unswappable kernel memory instead
++          of a graphics board, but opposed to other frame buffer devices it 
++          also provides a virtual keyboard and mouse/touch device as an input
++          device.
++          It is mainly intended for use with virtual and real system that have
++          no real graphics or input hardware, but instead expose the contents 
++          of the console screen via a RFB or VNC application.
++
++          To compile this driver as a module, choose M here: the
++          module will be called vfb. In order to load it, you must use
++          the vfb_enable=1 option.
++
++          If unsure, say N.
++
+ config XEN_FBDEV_FRONTEND
+ 	tristate "Xen virtual frame buffer support"
+ 	depends on FB && XEN
