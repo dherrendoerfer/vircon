@@ -1,0 +1,64 @@
+From 79b193aeae3aa137a23bc27d50a1d62b0767313c Mon Sep 17 00:00:00 2001
+From: Peter Morjan <pmorjan@gmail.com>
+Date: Sat, 8 Dec 2018 13:37:51 +0100
+Subject: [PATCH] add virtual console vircon
+
+https://github.com/dherrendoerfer/vircon
+---
+ pkg/vm/config.go       |  2 +-
+ qemu/x86_64/Dockerfile | 19 ++++++++++++++++---
+ 2 files changed, 17 insertions(+), 4 deletions(-)
+
+diff --git a/pkg/vm/config.go b/pkg/vm/config.go
+index c1172d8..9121684 100644
+--- a/pkg/vm/config.go
++++ b/pkg/vm/config.go
+@@ -12,7 +12,7 @@ import (
+ const MinMem = 64
+ 
+ // KernelParameters defines kernel boot parameters.
+-const KernelParameters = "console=ttyS0 panic=1 module.sig_enforce=1 loglevel=3"
++const KernelParameters = "console=ttyS0 panic=1 module.sig_enforce=0 loglevel=3"
+ 
+ // ReaperInterval defines the frequncy of the reaper runs.
+ var ReaperInterval = time.Second * 60
+diff --git a/qemu/x86_64/Dockerfile b/qemu/x86_64/Dockerfile
+index 882b70a..3caac4f 100644
+--- a/qemu/x86_64/Dockerfile
++++ b/qemu/x86_64/Dockerfile
+@@ -29,8 +29,16 @@ RUN mkdir -p \
+     $QEMU_ROOT/rootfs \
+     $QEMU_ROOT/sys
+ 
+-RUN rm -f /lib/modules/*/build \
+-    && echo base  /lib/modules/*/kernel/fs/fscache/fscache.ko                                > $QEMU_ROOT/kernel.conf \
++RUN git clone https://github.com/dherrendoerfer/vircon.git /root/vircon \
++    && KERNELVER=$(basename /lib/modules/*) \
++    && apt-get install -y libvncserver-dev libelf-dev linux-headers-$KERNELVER \
++    && cd /root/vircon \
++    && make KERNELVER=$KERNELVER \
++    && make -C /lib/modules/$KERNELVER/build M=$PWD modules_install \
++    && rm -f /lib/modules/*/build \
++    && cp fbvncserver /var/lib/runq/
++
++RUN    echo base  /lib/modules/*/kernel/fs/fscache/fscache.ko                                > $QEMU_ROOT/kernel.conf \
+     && echo base  /lib/modules/*/kernel/net/9p/9pnet.ko                                     >> $QEMU_ROOT/kernel.conf \
+     && echo base  /lib/modules/*/kernel/net/9p/9pnet_virtio.ko                              >> $QEMU_ROOT/kernel.conf \
+     && echo base  /lib/modules/*/kernel/fs/9p/9p.ko                                         >> $QEMU_ROOT/kernel.conf \
+@@ -45,7 +53,12 @@ RUN rm -f /lib/modules/*/build \
+     && echo btrfs /lib/modules/*/kernel/crypto/xor.ko                                       >> $QEMU_ROOT/kernel.conf \
+     && echo btrfs /lib/modules/*/kernel/fs/btrfs/btrfs.ko                                   >> $QEMU_ROOT/kernel.conf \
+     && echo xfs   /lib/modules/*/kernel/lib/libcrc32c.ko                                    >> $QEMU_ROOT/kernel.conf \
+-    && echo xfs   /lib/modules/*/kernel/fs/xfs/xfs.ko                                       >> $QEMU_ROOT/kernel.conf
++    && echo xfs   /lib/modules/*/kernel/fs/xfs/xfs.ko                                       >> $QEMU_ROOT/kernel.conf \
++    && echo base  /lib/modules/*/kernel/drivers/video/fbdev/core/sysimgblt.ko               >> $QEMU_ROOT/kernel.conf \
++    && echo base  /lib/modules/*/kernel/drivers/video/fbdev/core/sysfillrect.ko             >> $QEMU_ROOT/kernel.conf \
++    && echo base  /lib/modules/*/kernel/drivers/video/fbdev/core/syscopyarea.ko             >> $QEMU_ROOT/kernel.conf \
++    && echo base  /lib/modules/*/kernel/drivers/video/fbdev/core/fb_sys_fops.ko             >> $QEMU_ROOT/kernel.conf \
++    && echo base  /lib/modules/*/extra/vircon.ko vircon_enable=1                            >> $QEMU_ROOT/kernel.conf
+ 
+ RUN cp /boot/vmlinuz-*-generic $QEMU_ROOT/kernel
+ 
+-- 
+2.19.2
+
