@@ -64,6 +64,7 @@ static int mpid = 0;
 static int shutdown_set = 0;
 
 #define VNC_PORT 5901
+#define AUTHFILE "/.rfbpasswd"
 
 static char pidfile[]="/var/run/fbvncserver.pid";
 
@@ -76,6 +77,17 @@ static int ymin, ymax;
 /* Defines if the mouse should move softly with many updates or if the
  * mouse acts like a touch device only moving upon each button update */
 static int mousemode = 0;
+
+/* Defines if the web server should be started */
+static int webmode = 0;
+
+/* Defines preset auth */
+static int authmode = 0;
+
+/*****************************************************************************/
+
+static void keyevent(rfbBool down, rfbKeySym key, rfbClientPtr cl);
+static void ptrevent(int buttonMask, int x, int y, rfbClientPtr cl);
 
 /* No idea, just copied from fbvncserver as part of the frame differerencing
  * algorithm.  I will probably be later rewriting all of this. */
@@ -380,8 +392,15 @@ static void init_fb_server(int argc, char **argv)
 	vncscr->desktopName = "Vircon Screen";
 	vncscr->frameBuffer = (char *)vncbuf;
 	vncscr->alwaysShared = FALSE;
-	vncscr->httpDir = NULL;
-	vncscr->port = VNC_PORT;
+	if (webmode == 1) 
+		vncscr->httpDir = "/.vnc-webclient";
+	if (vncscr->httpPort == 0) 
+		vncscr->httpPort = 5800;
+	if (vncscr->port == 0)
+		vncscr->port = VNC_PORT;
+        if (authmode == 1)
+		vncscr->authPasswdData=AUTHFILE;
+
 	vncscr->listenInterface = vncaddr;
 
 #ifdef DEBUG
@@ -911,9 +930,10 @@ void print_usage(char **argv)
 		"-t device: touch device node, default is autodetect 'vircon mouse'\n"
 		"-f device: fb device node, default is /dev/fb0\n"
 		"-m : mouse/touch mode, default is touch\n"
+		"-w : web server mode, default is off (Root is /.vnc-webclient)\n"
 		"-l : only offer connections on localhost interface, default is all\n"
 		"-d : don't become daemon process, run in foreground\n"
-		"-h : print this help\n",argv[0]);
+		"-H : print this help\n",argv[0]);
 }
 
 int main(int argc, char **argv)
@@ -928,9 +948,15 @@ int main(int argc, char **argv)
 			if(*argv[i] == '-') {
 				switch(*(argv[i] + 1))
 				{
-					case 'h':
+					case 'H':
 						print_usage(argv);
 						exit(0);
+						break;
+					case 'a':
+						authmode=1;
+						break;
+					case 'w':
+						webmode=1;
 						break;
 					case 'm':
 						mousemode=1;
@@ -952,6 +978,15 @@ int main(int argc, char **argv)
 					case 'f':
 						i++;
 						strcpy(FB_DEVICE, argv[i]);
+						break;
+					case 'p':
+						i++;
+						if (rfbEncryptAndStorePasswd(argv[i], AUTHFILE) != 0) {
+							printf("Storing password failed.\n");
+							exit (1);
+						}
+						printf("Storing password.\n");
+						exit (0);
 						break;
 				}
 			}
